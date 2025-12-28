@@ -84,6 +84,7 @@ int main(void)
         }
 
         xUpdateFramebuffer(&win);
+        xUpdateFrame(&win);
         xUpdateInput();
         usleep(1000000 / XFPS);
     }
