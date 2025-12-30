@@ -11,13 +11,15 @@
 #include "xMath.h"
 #include "xUtil.h"
 
+#define SKY_COLOR 0x000000
+
 // Simple checkerboard ground plane raytracer
 static inline uint32_t raytrace_ground(const Vec3 origin, const Vec3 direction)
 {
-    if (fabsf(direction.y) < 0.001f) return 0x000000; // Sky
+    if (fabsf(direction.y) < 0.001f) return SKY_COLOR; // Sky
     
     const float t = -origin.y / direction.y;
-    if (t < 0.0f) return 0x000000; // Sky
+    if (t < 0.0f) return SKY_COLOR; // Sky
     
     const Vec3 hit = add(origin, mul(direction, t));
     const int checker = ((int)floorf(hit.x) + (int)floorf(hit.z)) & 1;
