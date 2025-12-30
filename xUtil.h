@@ -47,15 +47,6 @@ typedef struct {
     xMaterial mat;
 } xRect;
 
-typedef struct {
-    xRect *rects;
-    int rect_count;
-    int rect_max;
-    xSphere *spheres;
-    int sphere_count;
-    int sphere_max;
-} xScene;
-
 // Camera functions
 void xCameraInit(xCamera *cam);
 void xCameraUpdate(xCamera *cam);
@@ -64,26 +55,14 @@ void xCameraRotate(xCamera *cam, float dyaw, float dpitch);
 Ray  xCameraGetRay(const xCamera *cam, float u, float v, float aspect_ratio);
 
 // Scene helpers
-void xSceneInit(xScene *scene);
-void xAddSphere(xSphere *spheres, int *count, int max, Vec3 center, float radius, Vec3 color, float refl);
-void xAddRect(xRect *rects, int *count, int max, Vec3 point, Vec3 normal, Vec3 u, Vec3 v, float width, float height, Vec3 color, float refl);
-void xAddCube(xRect *rects, int *count, int max, Vec3 center, float sx, float sy, float sz, Vec3 color, float refl);
+void xAddSphere(xSphere *sphere, Vec3 center, float radius, Vec3 color, float refl);
+void xAddRect(xRect *rect, Vec3 point, Vec3 normal, Vec3 u, Vec3 v, float width, float height, Vec3 color, float refl);
 
 #ifdef __cplusplus
 }
 #endif
 
 #ifdef XUTIL_IMPLEMENTATION
-
-inline void xSceneInit(xScene *scene)
-{
-    scene->rects = NULL;
-    scene->rect_count = 0;
-    scene->rect_max = 0;
-    scene->spheres = NULL;
-    scene->sphere_count = 0;
-    scene->sphere_max = 0;
-}
 
 inline void xCameraInit(xCamera *cam)
 {
@@ -141,39 +120,21 @@ inline Ray xCameraGetRay(const xCamera *cam, const float u, const float v, const
     return (Ray){cam->position, rd};
 }
 
-inline void xAddSphere(xSphere *spheres, int *count, const int max, const Vec3 center, const float radius, const Vec3 color, const float refl)
+inline void xAddSphere(xSphere *sphere, const Vec3 center, const float radius, const Vec3 color, const float refl)
 {
-    if (*count < max) {
-        spheres[*count] = (xSphere) {
-            center, radius, 
-            {color, refl, 0.0f}
-        };
-        (*count)++;
-    }
+    *sphere = (xSphere) {
+        center, radius, 
+        {color, refl, 0.0f}
+    };
 }
 
-inline void xAddRect(xRect *rects, int *count, const int max, const Vec3 point, const Vec3 normal, const Vec3 u, const Vec3 v, const float width, const float height, const Vec3 color, const float refl)
+inline void xAddRect(xRect *rect, const Vec3 point, const Vec3 normal, const Vec3 u, const Vec3 v, const float width, const float height, const Vec3 color, const float refl)
 {
-    if (*count < max) {
-        rects[*count] = (xRect) {
-            point, norm(normal), norm(u), norm(v),
-            width, height,
-            {color, refl, 0.0f}
-        };
-        (*count)++;
-    }
-}
-
-inline void xAddCube(xRect *rects, int *count, const int max, const Vec3 center, const float sx, const float sy, const float sz, const Vec3 color, const float refl)
-{
-    const float hx = sx / 2.0f, hy = sy / 2.0f, hz = sz / 2.0f;
-    
-    xAddRect(rects, count, max, vec3(center.x, center.y - hy, center.z), vec3(0,-1,0), vec3(1,0,0), vec3(0,0,1), sx, sz, color, refl);
-    xAddRect(rects, count, max, vec3(center.x, center.y + hy, center.z), vec3(0,1,0),  vec3(1,0,0), vec3(0,0,1), sx, sz, color, refl);
-    xAddRect(rects, count, max, vec3(center.x - hx, center.y, center.z), vec3(-1,0,0), vec3(0,0,1), vec3(0,1,0), sz, sy, color, refl);
-    xAddRect(rects, count, max, vec3(center.x + hx, center.y, center.z), vec3(1,0,0),  vec3(0,0,1), vec3(0,1,0), sz, sy, color, refl);
-    xAddRect(rects, count, max, vec3(center.x, center.y, center.z - hz), vec3(0,0,-1), vec3(1,0,0), vec3(0,1,0), sx, sy, color, refl);
-    xAddRect(rects, count, max, vec3(center.x, center.y, center.z + hz), vec3(0,0,1),  vec3(1,0,0), vec3(0,1,0), sx, sy, color, refl);
+    *rect = (xRect) {
+        point, norm(normal), norm(u), norm(v),
+        width, height,
+        {color, refl, 0.0f}
+    };
 }
 
 #endif // XUTIL_IMPLEMENTATION
