@@ -43,7 +43,7 @@ typedef struct {
     int num_triangles;
     Vec3 position;
     float rot_x, rot_y, rot_z;
-    float scale;
+    Vec3 scale;
     xMaterial mat;
 } xModel;
 
@@ -57,7 +57,7 @@ Ray  xCameraGetRay(const xCamera *cam, float u, float v, float aspect_ratio);
 // Model functions
 xModel* xModelCreate(xModel* storage, int* count, int max, Vec3 color, float refl);
 void    xModelLoad(xModel* m, const char* path);
-void    xModelTransform(xModel* m, Vec3 pos, Vec3 rot, float scale);
+void    xModelTransform(xModel* m, Vec3 pos, Vec3 rot, Vec3 scale);
 void    xModelUpdate(const xModel* models, int count);
 
 #ifdef __cplusplus
@@ -141,7 +141,7 @@ static inline Vec3 rotate_z(const Vec3 v, const float a)
 
 static inline Vec3 transform_vertex(Vec3 v, const xModel* m)
 {
-    v = mul(v, m->scale);
+    v = vmul(v, m->scale);
     if (m->rot_z) v = rotate_z(v, m->rot_z);
     if (m->rot_x) v = rotate_x(v, m->rot_x);
     if (m->rot_y) v = rotate_y(v, m->rot_y);
@@ -155,7 +155,7 @@ inline xModel* xModelCreate(xModel* storage, int* count, const int max, const Ve
     xModel* m = &storage[(*count)++];
     *m = (xModel){
         .position = {0, 0, 0},
-        .scale = 1.0f,
+        .scale = {1.0f, 1.0f, 1.0f},
         .mat = {color, refl, 0.0f}
     };
     return m;
@@ -196,7 +196,7 @@ inline void xModelLoad(xModel* m, const char* path)
     m->num_triangles = nt;
 }
 
-inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const float scale)
+inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const Vec3 scale)
 {
     m->position = pos;
     m->rot_x = rot.x;

@@ -18,6 +18,7 @@ Vec3  vec3(float x, float y, float z);
 Vec3  add(Vec3 a, Vec3 b);
 Vec3  sub(Vec3 a, Vec3 b);
 Vec3  mul(Vec3 v, float t);
+Vec3  vmul(Vec3 a, Vec3 b);
 Vec3  vdiv(Vec3 v, float t);
 float dot(Vec3 a, Vec3 b);
 Vec3  cross(Vec3 a, Vec3 b);
@@ -56,6 +57,15 @@ inline Vec3 mul(Vec3 v, const float t)
         v.x * t,
         v.y * t,
         v.z * t,
+    };
+}
+
+inline Vec3 vmul(const Vec3 a, const Vec3 b)
+{
+    return (Vec3) {
+        a.x * b.x,
+        a.y * b.y,
+        a.z * b.z,
     };
 }
 
