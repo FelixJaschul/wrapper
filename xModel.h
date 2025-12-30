@@ -109,14 +109,14 @@ inline xModel* xModelCreate(xModel* storage, int* count, const int max, const Ve
 {
     if (*count >= max) return NULL;
     xModel* m = &storage[(*count)++];
-    m->triangles = NULL,
-    m->transformed_triangles = NULL,
-    m->num_triangles = 0,
-    m->capacity = 0,
-    m->position = {0, 0, 0},
-    m->scale = {1.0f, 1.0f, 1.0f},
-    m->rot_x = 0, .rot_y = 0, .rot_z = 0,
-    m->mat = {color, refl, 0.0f}
+    m->triangles = NULL;
+    m->transformed_triangles = NULL;
+    m->num_triangles = 0;
+    m->capacity = 0;
+    m->position = {0, 0, 0};
+    m->scale = {1.0f, 1.0f, 1.0f};
+    m->rot_x = 0; m->rot_y = 0; m->rot_z = 0;
+    m->mat = {color, refl, 0.0f};
     return m;
 }
 
