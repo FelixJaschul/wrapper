@@ -93,8 +93,12 @@ void xDrawPixel(const xWindow *w, int x, int y, uint32_t color);
 #include "xMath.h"
 #endif
 
-#ifdef XUTIL_IMPLEMENTATION
-#include "xUtil.h"
+#ifdef XCAMERA_IMPLEMENTATION
+#include "xCamera.h"
+#endif
+
+#ifdef XMODEL_IMPLEMENTATION
+#include "xModel.h"
 #endif
 
 inline void xWindowInit(xWindow *w)
@@ -107,7 +111,7 @@ inline void xWindowInit(xWindow *w)
     w->height = 600;
     w->x = 100;
     w->y = 100;
-    w->title = "X11 Window";
+    w->title = "X11 DEMO WINDOW";
     w->image = NULL;
     w->buffer = NULL;
     w->fps = 60.0;
