@@ -88,7 +88,8 @@ inline void xWindowInit(xWindow *w)
 
 inline bool xCreateWindow(xWindow *w)
 {
-    if (!w->display) {
+    if (!w->display)
+    {
         fprintf(stderr, "Failed to open X11 display\n");
         return false;
     }
@@ -100,7 +101,8 @@ inline bool xCreateWindow(xWindow *w)
         WhitePixel(w->display, w->screen)
     );
 
-    if (!w->window) {
+    if (!w->window)
+    {
         fprintf(stderr, "Failed to create X11 window\n");
         return false;
     }
@@ -141,13 +143,15 @@ inline void xDestroyWindow(xWindow *w)
 {
     if (!w->display) return;
 
-    if (w->image) {
+    if (w->image)
+    {
         XDestroyImage(w->image);
         w->image = NULL;
         w->buffer = NULL;
     }
 
-    if (w->window) {
+    if (w->window)
+    {
         XDestroyWindow(w->display, w->window);
         w->window = 0;
     }
@@ -179,7 +183,7 @@ inline void xUpdateFrame(xWindow *w)
     }
 
     w->deltat = elapsed;
-    w->lastt = current_time;
+    w->lastt  = current_time;
 }
 
 inline void xUpdateFramebuffer(const xWindow *w)
@@ -195,8 +199,7 @@ inline double xGetFPS(const xWindow *w)
 
 inline void xDrawPixel(const xWindow *w, int x, int y, uint32_t color)
 {
-    if (x >= 0 && x < w->width && y >= 0 && y < w->height)
-        w->buffer[y * w->width + x] = color;
+    if (x >= 0 && x < w->width && y >= 0 && y < w->height) w->buffer[y * w->width + x] = color;
 }
 
 #endif // X11_WRAPPER_H

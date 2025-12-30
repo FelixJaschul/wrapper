@@ -108,18 +108,18 @@ inline void xCameraUpdate(xCamera *cam)
     if (cam->pitch < -89.0f) cam->pitch = -89.0f;
 
     // Calculate front vector from yaw/pitch
-    const float yaw_rad = cam->yaw * M_PI / 180.0f;
+    const float yaw_rad   = cam->yaw * M_PI / 180.0f;
     const float pitch_rad = cam->pitch * M_PI / 180.0f;
     cam->front = vec3(
         cosf(yaw_rad) * cosf(pitch_rad),
         sinf(pitch_rad),
         sinf(yaw_rad) * cosf(pitch_rad)
     );
-    cam->front = norm(cam->front);
 
-    // Calculate right and up vectors
+    // Calculate right, up and front vectors
+    cam->front = norm(cam->front);
     cam->right = norm(cross(cam->front, vec3(0, 1, 0)));
-    cam->up = cross(cam->right, cam->front);
+    cam->up    = cross(cam->right, cam->front);
 }
 
 inline void xCameraMove(xCamera *cam, const Vec3 direction, const float speed)
@@ -208,10 +208,13 @@ inline void xModelLoad(xModel* m, const char* path)
     int nv = 0, nt = 0;
     char buf[256];
 
-    while (fgets(buf, sizeof(buf), f)) {
-        if (buf[0] == 'v' && buf[1] == ' ') {
+    while (fgets(buf, sizeof(buf), f))
+    {
+        if (buf[0] == 'v' && buf[1] == ' ')
+        {
             // Vertex line
-            if (nv >= vert_capacity) {
+            if (nv >= vert_capacity)
+            {
                 vert_capacity *= 2;
                 verts = (Vec3*)realloc(verts, vert_capacity * sizeof(Vec3));
                 assert(verts && "Failed to reallocate vertex buffer");
@@ -221,18 +224,22 @@ inline void xModelLoad(xModel* m, const char* path)
             sscanf(buf + 2, "%f %f %f", &x, &y, &z);
             verts[nv++] = vec3(x, y, z);
         }
-        else if (buf[0] == 'f') {
+        else if (buf[0] == 'f')
+        {
             // Face line (only supports triangulated meshes)
-            if (nt >= tri_capacity) {
+            if (nt >= tri_capacity)
+            {
                 tri_capacity *= 2;
                 tris = (xTriangle*)realloc(tris, tri_capacity * sizeof(xTriangle));
                 assert(tris && "Failed to reallocate triangle buffer");
             }
 
             int a, b, c;
-            if (sscanf(buf + 2, "%d %d %d", &a, &b, &c) == 3) {
+            if (sscanf(buf + 2, "%d %d %d", &a, &b, &c) == 3)
+            {
                 // OBJ indices are 1-based
-                if (a > 0 && a <= nv && b > 0 && b <= nv && c > 0 && c <= nv) {
+                if (a > 0 && a <= nv && b > 0 && b <= nv && c > 0 && c <= nv)
+                {
                     tris[nt++] = (xTriangle){verts[a-1], verts[b-1], verts[c-1]};
                 }
             }
@@ -258,11 +265,13 @@ inline void xModelLoad(xModel* m, const char* path)
 
 inline void xModelFree(xModel* m)
 {
-    if (m->triangles) {
+    if (m->triangles)
+    {
         free(m->triangles);
         m->triangles = NULL;
     }
-    if (m->transformed_triangles) {
+    if (m->transformed_triangles)
+    {
         free(m->transformed_triangles);
         m->transformed_triangles = NULL;
     }
@@ -281,9 +290,11 @@ inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const Vec
 
 inline void xModelUpdate(const xModel* models, const int count)
 {
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++)
+    {
         const xModel* m = &models[i];
-        for (int j = 0; j < m->num_triangles; j++) {
+        for (int j = 0; j < m->num_triangles; j++)
+        {
             m->transformed_triangles[j].v0 = transform_vertex(m->triangles[j].v0, m);
             m->transformed_triangles[j].v1 = transform_vertex(m->triangles[j].v1, m);
             m->transformed_triangles[j].v2 = transform_vertex(m->triangles[j].v2, m);
