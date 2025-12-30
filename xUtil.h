@@ -64,6 +64,7 @@ void xCameraRotate(xCamera *cam, float dyaw, float dpitch);
 Ray  xCameraGetRay(const xCamera *cam, float u, float v, float aspect_ratio);
 
 // Scene helpers
+void xSceneInit(xScene *scene);
 void xAddSphere(xSphere *spheres, int *count, int max, Vec3 center, float radius, Vec3 color, float refl);
 void xAddRect(xRect *rects, int *count, int max, Vec3 point, Vec3 normal, Vec3 u, Vec3 v, float width, float height, Vec3 color, float refl);
 void xAddCube(xRect *rects, int *count, int max, Vec3 center, float sx, float sy, float sz, Vec3 color, float refl);
@@ -73,6 +74,16 @@ void xAddCube(xRect *rects, int *count, int max, Vec3 center, float sx, float sy
 #endif
 
 #ifdef XUTIL_IMPLEMENTATION
+
+inline void xSceneInit(xScene *scene)
+{
+    scene->rects = NULL;
+    scene->rect_count = 0;
+    scene->rect_max = 0;
+    scene->spheres = NULL;
+    scene->sphere_count = 0;
+    scene->sphere_max = 0;
+}
 
 inline void xCameraInit(xCamera *cam)
 {
