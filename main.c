@@ -1,5 +1,4 @@
 // Minimal example showing FPS camera with mouse control
-#include <stdint.h>
 #include <math.h>
 
 #define XKEYS_IMPLEMENTATION
