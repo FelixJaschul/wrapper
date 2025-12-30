@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <math.h>
 
-#define X11_IMPLEMENTATION
 #define XKEYS_IMPLEMENTATION
 #define XMATH_IMPLEMENTATION
 #define XUTIL_IMPLEMENTATION
