@@ -7,11 +7,10 @@
 #define XMATH_IMPLEMENTATION
 #define XUTIL_IMPLEMENTATION
 
-#include <stdio.h>
-#include <x11.h>
-#include <xKeys.h>
-#include <xMath.h>
-#include <xUtil.h>
+#include "x11.h"
+#include "xKeys.h"
+#include "xMath.h"
+#include "xUtil.h"
 
 // Simple checkerboard ground plane raytracer
 static inline uint32_t raytrace_ground(const Vec3 origin, const Vec3 direction)
