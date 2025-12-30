@@ -73,7 +73,7 @@ inline void xWindowInit(xWindow *w)
 
 inline bool xCreateWindow(xWindow *w)
 {
-    if (!w->display) return false;
+    if (!w->display) goto breakpoint;
 
     w->window = XCreateSimpleWindow(
         w->display, RootWindow(w->display, w->screen),
@@ -82,7 +82,7 @@ inline bool xCreateWindow(xWindow *w)
         WhitePixel(w->display, w->screen)
     );
 
-    if (!w->window) return false;
+    if (!w->window) goto breakpoint;
 
     XStoreName(w->display, w->window, w->title);
     XSelectInput(w->display, w->window, 
@@ -113,6 +113,11 @@ inline bool xCreateWindow(xWindow *w)
 
     clock_gettime(CLOCK_MONOTONIC, &w->lastt);
     return true;
+
+    breakpoint:
+    if (!w->display) printf("Failed to open display (x11.h / xCreateWindow())\n");
+    if (!w->window)  printf("Failed to create window (x11.h / xCreateWindow())\n");
+    return false;
 }
 
 inline void xDestroyWindow(xWindow *w)
