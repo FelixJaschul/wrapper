@@ -117,11 +117,21 @@ inline bool xCreateWindow(xWindow *w)
 
 inline void xDestroyWindow(xWindow *w)
 {
-    if (!w->display || !w->window) return;
-    if (w->image) XDestroyImage(w->image);
-    XDestroyWindow(w->display, w->window);
+    if (!w->display) return;
+    if (w->image) 
+    {
+        XDestroyImage(w->image);
+        w->image = NULL;
+        w->buffer = NULL;
+    }
+    if (w->window)
+    {
+        XDestroyWindow(w->display, w->window);
+        w->window = 0;
+    }
     XSync(w->display, False);
-    w->window = 0;
+    XCloseDisplay(w->display);
+    w->display = NULL;
 }
 
 inline void xUpdateFrame(xWindow *w)
