@@ -77,7 +77,8 @@ Ray xCameraGetRay(const xCamera* cam, float u_scaled, float v_scaled);
 
 #ifdef XCAMERA_IMPLEMENTATION
 
-inline void xCameraInit(xCamera *cam) {
+inline void xCameraInit(xCamera *cam)
+{
     cam->position = vec3(0.0f, 0.0f, 0.0f);
     cam->yaw = 0.0f;
     cam->pitch = 0.0f;
@@ -85,7 +86,8 @@ inline void xCameraInit(xCamera *cam) {
     xCameraUpdate(cam);
 }
 
-inline void xCameraUpdate(xCamera *cam) {
+inline void xCameraUpdate(xCamera *cam)
+{
     // Clamp pitch to avoid gimbal lock
     if (cam->pitch > 89.0f) cam->pitch = 89.0f;
     if (cam->pitch < -89.0f) cam->pitch = -89.0f;
@@ -101,20 +103,23 @@ inline void xCameraUpdate(xCamera *cam) {
 
     cam->front = norm(cam->front);
     cam->right = norm(cross(cam->front, vec3(0, 1, 0)));
-    cam->up = cross(cam->right, cam->front);
+    cam->up    = cross(cam->right, cam->front);
 }
 
-inline void xCameraMove(xCamera *cam, const Vec3 direction, const float speed) {
+inline void xCameraMove(xCamera *cam, const Vec3 direction, const float speed)
+{
     cam->position = add(cam->position, mul(direction, speed));
 }
 
-inline void xCameraRotate(xCamera *cam, const float dyaw, const float dpitch) {
+inline void xCameraRotate(xCamera *cam, const float dyaw, const float dpitch)
+{
     cam->yaw += dyaw;
     cam->pitch += dpitch;
     xCameraUpdate(cam);
 }
 
-inline Ray xCameraGetRay(const xCamera* cam, const float u_scaled, const float v_scaled) {
+inline Ray xCameraGetRay(const xCamera* cam, const float u_scaled, const float v_scaled)
+{
     Vec3 rd = add(cam->front, add(mul(cam->up, v_scaled), mul(cam->right, u_scaled)));
     rd = norm(rd);
     return (Ray){cam->position, rd};

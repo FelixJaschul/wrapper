@@ -78,22 +78,26 @@ void xModelUpdate(const xModel* models, int count);
 #include <string.h>
 
 // Rotation helpers
-static inline Vec3 rotate_x(const Vec3 v, const float a) {
+static inline Vec3 rotate_x(const Vec3 v, const float a)
+{
     const float c = cosf(a), s = sinf(a);
     return vec3(v.x, v.y * c - v.z * s, v.y * s + v.z * c);
 }
 
-static inline Vec3 rotate_y(const Vec3 v, const float a) {
+static inline Vec3 rotate_y(const Vec3 v, const float a)
+{
     const float c = cosf(a), s = sinf(a);
     return vec3(v.x * c - v.z * s, v.y, v.x * s + v.z * c);
 }
 
-static inline Vec3 rotate_z(const Vec3 v, const float a) {
+static inline Vec3 rotate_z(const Vec3 v, const float a)
+{
     const float c = cosf(a), s = sinf(a);
     return vec3(v.x * c - v.y * s, v.x * s + v.y * c, v.z);
 }
 
-static inline Vec3 transform_vertex(Vec3 v, const xModel* m) {
+static inline Vec3 transform_vertex(Vec3 v, const xModel* m)
+{
     v = vmul(v, m->scale);
     if (m->rot_z) v = rotate_z(v, m->rot_z);
     if (m->rot_x) v = rotate_x(v, m->rot_x);
@@ -101,7 +105,8 @@ static inline Vec3 transform_vertex(Vec3 v, const xModel* m) {
     return add(v, m->position);
 }
 
-inline xModel* xModelCreate(xModel* storage, int* count, const int max, const Vec3 color, const float refl) {
+inline xModel* xModelCreate(xModel* storage, int* count, const int max, const Vec3 color, const float refl)
+{
     if (*count >= max) return NULL;
     xModel* m = &storage[(*count)++];
     *m = (xModel){
@@ -117,20 +122,26 @@ inline xModel* xModelCreate(xModel* storage, int* count, const int max, const Ve
     return m;
 }
 
-inline void xModelFree(xModel* m) {
-    if (m->triangles) {
+inline void xModelFree(xModel* m)
+{
+    if (m->triangles)
+    {
         free(m->triangles);
         m->triangles = NULL;
     }
-    if (m->transformed_triangles) {
+
+    if (m->transformed_triangles)
+    {
         free(m->transformed_triangles);
         m->transformed_triangles = NULL;
     }
+
     m->num_triangles = 0;
     m->capacity = 0;
 }
 
-inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const Vec3 scale) {
+inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const Vec3 scale)
+{
     m->position = pos;
     m->rot_x = rot.x;
     m->rot_y = rot.y;
@@ -138,10 +149,13 @@ inline void xModelTransform(xModel* m, const Vec3 pos, const Vec3 rot, const Vec
     m->scale = scale;
 }
 
-inline void xModelUpdate(const xModel* models, const int count) {
-    for (int i = 0; i < count; i++) {
+inline void xModelUpdate(const xModel* models, const int count)
+{
+    for (int i = 0; i < count; i++)
+    {
         const xModel* m = &models[i];
-        for (int j = 0; j < m->num_triangles; j++) {
+        for (int j = 0; j < m->num_triangles; j++)
+        {
             m->transformed_triangles[j].v0 = transform_vertex(m->triangles[j].v0, m);
             m->transformed_triangles[j].v1 = transform_vertex(m->triangles[j].v1, m);
             m->transformed_triangles[j].v2 = transform_vertex(m->triangles[j].v2, m);
