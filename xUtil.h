@@ -183,7 +183,8 @@ inline void xModelLoad(xModel* m, const char* path)
             sscanf(buf + 2, "%f %f %f", &x, &y, &z);
             verts[nv++] = vec3(x, y, z);
         }
-        else if (buf[0] == 'f') {
+        else if (buf[0] == 'f')
+        {
             int a, b, c;
             sscanf(buf + 2, "%d %d %d", &a, &b, &c);
             tris[nt++] = (xTriangle){verts[a-1], verts[b-1], verts[c-1]};
