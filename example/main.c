@@ -32,7 +32,7 @@ int main(void)
 {
     xWindow win;
     xWindowInit(&win);
-    win.title = "FPS Camera - Click to grab mouse, SPACE to release";
+    win.title = "FPS DEMO";
     win.fps = 60;
 
     xCamera camera;
