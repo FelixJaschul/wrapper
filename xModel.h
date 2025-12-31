@@ -171,10 +171,10 @@ inline void xModelLoad(xModel* m, const char* path)
 
     // Dynamic arrays for vertices and triangles
     int vert_capacity = INITIAL_VERTEX_CAPACITY;
-    int tri_capacity = INITIAL_TRIANGLE_CAPACITY;
+    int tri_capacity  = INITIAL_TRIANGLE_CAPACITY;
 
-    Vec3* verts = (Vec3*)malloc(vert_capacity * sizeof(Vec3));
-    xTriangle* tris = (xTriangle*)malloc(tri_capacity * sizeof(xTriangle));
+    Vec3* verts     = malloc(vert_capacity * sizeof(Vec3));
+    xTriangle* tris = malloc(tri_capacity * sizeof(xTriangle));
     assert(verts && tris && "Failed to allocate OBJ parsing buffers");
 
     int nv = 0, nt = 0;
