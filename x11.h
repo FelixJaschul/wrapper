@@ -101,6 +101,10 @@ void xDrawPixel(const xWindow *w, int x, int y, uint32_t color);
 #include "xModel.h"
 #endif
 
+#ifdef XLIGHT_IMPLEMENTATION
+#include "xLight.h"
+#endif
+
 inline void xWindowInit(xWindow *w)
 {
     w->display = XOpenDisplay(NULL);
