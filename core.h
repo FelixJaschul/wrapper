@@ -47,7 +47,7 @@ typedef struct Window {
     uint32_t *buffer;    // Direct pixel buffer for software rendering
     double fps;          // Target frames per second
     double deltat;       // Delta time of last frame in seconds
-    struct timespec lastt;
+    timespec lastt;
 } Window_t;
 
 // Initialize window structure with default values
@@ -99,6 +99,23 @@ double getFPS(const Window_t *w);
  *  drawPixel(&win, 100, 100, 0xFF0000); // Draw red pixel
  */
 void drawPixel(const Window_t *w, int x, int y, uint32_t color);
+
+#ifdef SDL_IMPLEMENTATION
+#ifdef IMGUI_IMPLEMENTATION
+inline void imguiNewFrame()
+{
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+}
+
+inline void imguiEndFrame(Window_t *w)
+{
+    ImGui::Render();
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), w->renderer);
+}
+#endif
+#endif
 
 #ifdef __cplusplus
 }
