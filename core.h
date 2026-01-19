@@ -108,7 +108,7 @@ void drawPixel(const Window_t *w, int x, int y, uint32_t color);
 inline void windowInit(Window_t *w)
 {
 #ifdef SDL_IMPLEMENTATION
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
     }
     w->window   = NULL;
@@ -136,7 +136,7 @@ inline bool createWindow(Window_t *w)
 {
 #ifdef SDL_IMPLEMENTATION
     if (!SDL_WasInit(SDL_INIT_VIDEO)) {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        if (!SDL_Init(SDL_INIT_VIDEO)) {
             fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
             return false;
         }
@@ -153,7 +153,7 @@ inline bool createWindow(Window_t *w)
         return false;
     }
 
-    w->renderer = SDL_CreateRenderer(w->window, NULL, SDL_RENDERER_ACCELERATED);
+    w->renderer = SDL_CreateRenderer(w->window, NULL);
     if (!w->renderer) {
         fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
         SDL_DestroyWindow(w->window);
@@ -608,7 +608,7 @@ inline bool pollEvents(void *display, Input *input)
             case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP: {
                 const bool down = (event.type == SDL_EVENT_KEY_DOWN);
-                const SDL_Keycode sym = event.key.keysym.sym;
+                const SDL_Keycode sym = event.key.key;
                 Key k = KEY_UNKNOWN;
 
                 switch (sym) {
@@ -623,32 +623,32 @@ inline bool pollEvents(void *display, Input *input)
                     case SDLK_UP:    k = KEY_UP; break;
                     case SDLK_DOWN:  k = KEY_DOWN; break;
 
-                    case SDLK_a: k = KEY_A; break;
-                    case SDLK_b: k = KEY_B; break;
-                    case SDLK_c: k = KEY_C; break;
-                    case SDLK_d: k = KEY_D; break;
-                    case SDLK_e: k = KEY_E; break;
-                    case SDLK_f: k = KEY_F; break;
-                    case SDLK_g: k = KEY_G; break;
-                    case SDLK_h: k = KEY_H; break;
-                    case SDLK_i: k = KEY_I; break;
-                    case SDLK_j: k = KEY_J; break;
-                    case SDLK_k: k = KEY_K; break;
-                    case SDLK_l: k = KEY_L; break;
-                    case SDLK_m: k = KEY_M; break;
-                    case SDLK_n: k = KEY_N; break;
-                    case SDLK_o: k = KEY_O; break;
-                    case SDLK_p: k = KEY_P; break;
-                    case SDLK_q: k = KEY_Q; break;
-                    case SDLK_r: k = KEY_R; break;
-                    case SDLK_s: k = KEY_S; break;
-                    case SDLK_t: k = KEY_T; break;
-                    case SDLK_u: k = KEY_U; break;
-                    case SDLK_v: k = KEY_V; break;
-                    case SDLK_w: k = KEY_W; break;
-                    case SDLK_x: k = KEY_X; break;
-                    case SDLK_y: k = KEY_Y; break;
-                    case SDLK_z: k = KEY_Z; break;
+                    case SDLK_A: k = KEY_A; break;
+                    case SDLK_B: k = KEY_B; break;
+                    case SDLK_C: k = KEY_C; break;
+                    case SDLK_D: k = KEY_D; break;
+                    case SDLK_E: k = KEY_E; break;
+                    case SDLK_F: k = KEY_F; break;
+                    case SDLK_G: k = KEY_G; break;
+                    case SDLK_H: k = KEY_H; break;
+                    case SDLK_I: k = KEY_I; break;
+                    case SDLK_J: k = KEY_J; break;
+                    case SDLK_K: k = KEY_K; break;
+                    case SDLK_L: k = KEY_L; break;
+                    case SDLK_M: k = KEY_M; break;
+                    case SDLK_N: k = KEY_N; break;
+                    case SDLK_O: k = KEY_O; break;
+                    case SDLK_P: k = KEY_P; break;
+                    case SDLK_Q: k = KEY_Q; break;
+                    case SDLK_R: k = KEY_R; break;
+                    case SDLK_S: k = KEY_S; break;
+                    case SDLK_T: k = KEY_T; break;
+                    case SDLK_U: k = KEY_U; break;
+                    case SDLK_V: k = KEY_V; break;
+                    case SDLK_W: k = KEY_W; break;
+                    case SDLK_X: k = KEY_X; break;
+                    case SDLK_Y: k = KEY_Y; break;
+                    case SDLK_Z: k = KEY_Z; break;
 
                     case SDLK_0: k = KEY_NUM0; break;
                     case SDLK_1: k = KEY_NUM1; break;
