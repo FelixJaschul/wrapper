@@ -50,7 +50,7 @@ typedef struct Window {
     int bHeight;
     double fps;
     double deltat;
-    timespec lastt;
+    struct timespec lastt;
 
     bool buffer_valid;
     size_t buffer_size;
@@ -499,9 +499,9 @@ void inputInit(Input *input);
 // Returns true if window should close
 // NOTE: This automatically calls updateInput() at the end, so you don't need to call it manually
 #ifdef SDL_IMPLEMENTATION
-bool pollEvents(void *display, Input *input, Window_t *win);
+bool pollEvents(Window_t *win, Input *input)
 #else
-bool pollEvents(Display *display, Input *input, Window_t *win);
+bool pollEvents(Window_t *win, Input *input);
 #endif
 
 // Copy current to previous - ONLY call manually if not using pollEvents
@@ -565,9 +565,8 @@ inline void inputInit(Input *input)
 
 #ifdef SDL_IMPLEMENTATION
 
-inline bool pollEvents(void *display, Input *input, Window_t *win)
+inline inline bool pollEvents(Window_t *win, Input *input)
 {
-    (void)display;
     bool shouldClose = false;
 
     input->mouse_dx = 0;
@@ -705,9 +704,9 @@ inline bool pollEvents(void *display, Input *input, Window_t *win)
 
 #else // X11 backend
 
-inline bool pollEvents(Display *display, Input *input, Window_t *win)
+inline bool pollEvents(Window_t *win, Input *input)
 {
-    const Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
+    const Atom wmDeleteMessage = XInternAtom(win->display, "WM_DELETE_WINDOW", False);
     bool shouldClose = false;
 
     input->mouse_dx = 0;
@@ -716,7 +715,7 @@ inline bool pollEvents(Display *display, Input *input, Window_t *win)
     // Handle window resize
     if (win) {
         XEvent ev;
-        while (XCheckTypedWindowEvent(display, win->window, ConfigureNotify, &ev)) {
+        while (XCheckTypedWindowEvent(win->display, win->window, ConfigureNotify, &ev)) {
             if (ev.xconfigure.width != win->width || ev.xconfigure.height != win->height) {
                 win->width = ev.xconfigure.width;
                 win->height = ev.xconfigure.height;
@@ -724,13 +723,13 @@ inline bool pollEvents(Display *display, Input *input, Window_t *win)
                 win->resized = true;
             }
         }
-        XFlush(display);
+        XFlush(win->display);
     }
 
-    while (XPending(display) > 0)
+    while (XPending(win->display) > 0)
     {
         XEvent event;
-        XNextEvent(display, &event);
+        XNextEvent(win->display, &event);
 
         switch (event.type)
         {
@@ -847,9 +846,8 @@ inline bool pollEvents(Display *display, Input *input, Window_t *win)
 
     if (input->mouse_grabbed && (input->mouse_dx != 0 || input->mouse_dy != 0))
     {
-        XWarpPointer(display, None, input->grab_window,
-                     0, 0, 0, 0, input->center_x, input->center_y);
-        XFlush(display);
+        XWarpPointer(win->display, None, input->grab_window, 0, 0, 0, 0, input->center_x, input->center_y);
+        XFlush(win->display);
         input->last_x = input->center_x;
         input->last_y = input->center_y;
     }
