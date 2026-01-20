@@ -22,6 +22,7 @@
 #else
     #include <X11/Xlib.h>
     #include <X11/Xutil.h>
+    #include <unistd.h>
 #endif
 
 #ifdef __cplusplus
@@ -44,74 +45,39 @@ typedef struct Window {
     int height;
     int x, y;
     const char *title;
-    uint32_t *buffer;    // Direct pixel buffer for software rendering
+    uint32_t *buffer;
     int bWidth;
     int bHeight;
-    double fps;          // Target frames per second
-    double deltat;       // Delta time of last frame in seconds
+    double fps;
+    double deltat;
     timespec lastt;
+
+    bool buffer_valid;
+    size_t buffer_size;
+    bool resized;
+    bool vsync;
 } Window_t;
 
-// Initialize window structure with default values
-/*  -> Example:
- *  Window_t win;
- *  windowInit(&win);
- *  win.title = "My Window";
- *  win.width = 1280;
- *  win.height = 720;
- */
 void windowInit(Window_t *w);
-
-// Create and display window, returns false on failure
-/*  -> Example:
- *  if (!createWindow(&win)) return 1;
- */
 bool createWindow(Window_t *w);
-
-// Cleanup and destroy window resources
-/*  -> Example:
- *  destroyWindow(&win);
- */
 void destroyWindow(Window_t *w);
-
-// Update frame timing (sleeps to maintain target FPS)
-/*  -> Example:
- *  while(1) {
- *      ...
- *      updateFrame(&win);
- *  }
- */
 void updateFrame(Window_t *w);
+double getFPS(const Window_t *w);
+double getDelta(const Window_t *w);
+void drawPixel(const Window_t *w, int x, int y, uint32_t color);
+void setVSync(Window_t *w, bool enable);
 
-// Push pixel buffer to screen
+// Internal buffer management
+bool resizeBuffer(Window_t *w);
+void freeBuffer(Window_t *w);
+
 #ifdef SDL_IMPLEMENTATION
-/*  -> Example:
- *  // After drawing to win.buffer
- *  updateFramebuffer(&win, texture);
- */
-void updateFramebuffer(const Window_t *w, SDL_Texture *texture);
+bool updateFramebuffer(const Window_t *w, SDL_Texture *texture);
 #else
-/*  -> Example:
- *  // After drawing to win.buffer
- *  updateFramebuffer(&win);
- */
-void updateFramebuffer(const Window_t *w);
+bool updateFramebuffer(const Window_t *w);
 #endif
 
-// Get current FPS based on actual frame time
-/*  -> Example:
- *  printf("FPS: %.2f\n", getFPS(&win));
- */
-double getFPS(const Window_t *w);
-
-// Draw single pixel at (x,y) with bounds checking
-/*  -> Example:
- *  drawPixel(&win, 100, 100, 0xFF0000); // Draw red pixel
- */
-void drawPixel(const Window_t *w, int x, int y, uint32_t color);
-
-#ifdef SDL_IMPLEMENTATION
-#ifdef IMGUI_IMPLEMENTATION
+#if defined(SDL_IMPLEMENTATION) && defined(IMGUI_IMPLEMENTATION)
 inline void imguiNewFrame()
 {
     ImGui_ImplSDLRenderer3_NewFrame();
@@ -124,7 +90,9 @@ inline void imguiEndFrame(Window_t *w)
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), w->renderer);
 }
-#endif
+#else
+#define imguiNewFrame() do {} while(0)
+#define imguiEndFrame(w) do {} while(0)
 #endif
 
 #ifdef __cplusplus
@@ -137,16 +105,63 @@ inline void imguiEndFrame(Window_t *w)
 
 #ifdef CORE_IMPLEMENTATION
 
+inline void freeBuffer(Window_t *w)
+{
+    if (w->buffer) {
+        free(w->buffer);
+        w->buffer = NULL;
+    }
+    w->buffer_valid = false;
+    w->buffer_size = 0;
+}
+
+inline bool resizeBuffer(Window_t *w)
+{
+    if (w->buffer_valid) freeBuffer(w);
+
+    const size_t sz = w->bWidth * w->bHeight * sizeof(uint32_t);
+    w->buffer = (uint32_t*)calloc(1, sz);
+    if (!w->buffer) {
+        fprintf(stderr, "Failed to allocate framebuffer (%dx%d)\n", w->bWidth, w->bHeight);
+        return false;
+    }
+
+    w->buffer_size = sz;
+    w->buffer_valid = true;
+
+#ifdef SDL_IMPLEMENTATION
+    // Texture handled in updateFramebuffer
+#else
+    if (w->image) {
+        XDestroyImage(w->image);
+        w->image = NULL;
+    }
+
+    w->image = XCreateImage(
+        w->display,
+        DefaultVisual(w->display, w->screen),
+        DefaultDepth(w->display, w->screen),
+        ZPixmap, 0, (char*)w->buffer,
+        w->bWidth, w->bHeight, 32, 0
+    );
+
+    if (!w->image) {
+        fprintf(stderr, "Failed to create XImage\n");
+        freeBuffer(w);
+        return false;
+    }
+#endif
+
+    return true;
+}
+
 inline void windowInit(Window_t *w)
 {
 #ifdef SDL_IMPLEMENTATION
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-    }
     w->window   = NULL;
     w->renderer = NULL;
 #else
-    w->display = XOpenDisplay(NULL);
+    w->display = NULL;
     w->screen  = 0;
     w->window  = 0;
     w->gc      = 0;
@@ -163,6 +178,10 @@ inline void windowInit(Window_t *w)
     w->bHeight= 600;
     w->fps    = 60.0;
     w->deltat = 0.0;
+    w->buffer_valid = false;
+    w->buffer_size = 0;
+    w->resized = false;
+    w->vsync = false;
     clock_gettime(CLOCK_MONOTONIC, &w->lastt);
 }
 
@@ -195,8 +214,17 @@ inline bool createWindow(Window_t *w)
         return false;
     }
 
-    w->buffer = (uint32_t*)malloc(w->width * w->height * sizeof(uint32_t));
-    assert(w->buffer && "Failed to allocate framebuffer");
+    if (w->vsync) {
+        SDL_SetRenderVSync(w->renderer, 1);
+    }
+
+    if (!resizeBuffer(w)) {
+        SDL_DestroyRenderer(w->renderer);
+        SDL_DestroyWindow(w->window);
+        w->renderer = NULL;
+        w->window = NULL;
+        return false;
+    }
 
 #ifdef IMGUI_IMPLEMENTATION
     IMGUI_CHECKVERSION();
@@ -209,11 +237,13 @@ inline bool createWindow(Window_t *w)
     clock_gettime(CLOCK_MONOTONIC, &w->lastt);
     return true;
 #else
+    w->display = XOpenDisplay(NULL);
     if (!w->display) {
         fprintf(stderr, "Failed to open X11 display\n");
         return false;
     }
 
+    w->screen = DefaultScreen(w->display);
     w->window = XCreateSimpleWindow(
         w->display, RootWindow(w->display, w->screen),
         w->x, w->y, w->width, w->height, 0,
@@ -223,6 +253,8 @@ inline bool createWindow(Window_t *w)
 
     if (!w->window) {
         fprintf(stderr, "Failed to create X11 window\n");
+        XCloseDisplay(w->display);
+        w->display = NULL;
         return false;
     }
 
@@ -242,17 +274,14 @@ inline bool createWindow(Window_t *w)
     XWindowEvent(w->display, w->window, ExposureMask, &ev);
 
     w->gc = DefaultGC(w->display, w->screen);
-    w->buffer = (uint32_t *) malloc(w->width * w->height * sizeof(uint32_t));
-    assert(w->buffer && "Failed to allocate framebuffer");
 
-    w->image = XCreateImage(
-        w->display,
-        DefaultVisual(w->display, w->screen),
-        DefaultDepth(w->display, w->screen),
-        ZPixmap, 0, (char*) w->buffer,
-        w->width, w->height, 32, 0
-    );
-    assert(w->image && "Failed to create XImage");
+    if (!resizeBuffer(w)) {
+        XDestroyWindow(w->display, w->window);
+        XCloseDisplay(w->display);
+        w->display = NULL;
+        w->window = 0;
+        return false;
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &w->lastt);
     return true;
@@ -275,11 +304,10 @@ inline void destroyWindow(Window_t *w)
         SDL_DestroyWindow(w->window);
         w->window = NULL;
     }
-    if (w->buffer) {
-        free(w->buffer);
-        w->buffer = NULL;
+    freeBuffer(w);
+    if (SDL_WasInit(SDL_INIT_VIDEO)) {
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
     }
-    SDL_Quit();
 #else
     if (!w->display) return;
 
@@ -287,10 +315,9 @@ inline void destroyWindow(Window_t *w)
         XDestroyImage(w->image);
         w->image  = NULL;
         w->buffer = NULL;
-    } else if (w->buffer) {
-        free(w->buffer);
-        w->buffer = NULL;
     }
+
+    freeBuffer(w);
 
     if (w->window) {
         XDestroyWindow(w->display, w->window);
@@ -312,13 +339,13 @@ inline void updateFrame(Window_t *w)
                      (current_time.tv_nsec - w->lastt.tv_nsec) / 1e9;
 
     const double target_frame_time = 1.0 / w->fps;
-    if (elapsed < target_frame_time) {
+    if (elapsed < target_frame_time && !w->vsync) {
         const double sleep_time = target_frame_time - elapsed;
-        struct timespec sleep_spec;
-        sleep_spec.tv_sec = (time_t)sleep_time;
-        sleep_spec.tv_nsec = (long)((sleep_time - sleep_spec.tv_sec) * 1e9);
-        nanosleep(&sleep_spec, NULL);
-
+#ifdef SDL_IMPLEMENTATION
+        SDL_Delay((Uint32)(sleep_time * 1000.0));
+#else
+        usleep((useconds_t)(sleep_time * 1e6));
+#endif
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elapsed = (current_time.tv_sec - w->lastt.tv_sec) +
                   (current_time.tv_nsec - w->lastt.tv_nsec) / 1e9;
@@ -327,54 +354,81 @@ inline void updateFrame(Window_t *w)
     w->deltat = elapsed;
     w->lastt  = current_time;
 }
+
 #ifdef SDL_IMPLEMENTATION
-inline void updateFramebuffer(const Window_t *w, SDL_Texture *texture)
+inline bool updateFramebuffer(const Window_t *w, SDL_Texture *texture)
 {
-    if (!w->renderer || !w->buffer || !texture) return;
+    if (!w->renderer || !w->buffer_valid || !texture) return false;
 
     void* pixels; int pitch;
-    SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-    memcpy(pixels, w->buffer, w->bWidth*w->bHeight*4);
+    if (!SDL_LockTexture(texture, NULL, &pixels, &pitch)) {
+        fprintf(stderr, "SDL_LockTexture failed: %s\n", SDL_GetError());
+        return false;
+    }
+
+    const int expected_pitch = w->bWidth * 4;
+    if (pitch != expected_pitch) {
+        memset(pixels, 0, w->bHeight * pitch);
+    }
+
+    memcpy(pixels, w->buffer, w->buffer_size);
     SDL_UnlockTexture(texture);
     SDL_RenderClear(w->renderer);
-    SDL_RenderTexture(w->renderer, texture, nullptr, nullptr);
-#else
-inline void updateFramebuffer(const Window_t *w)
-{
-    XPutImage(w->display, w->window, w->gc, w->image,
-              0, 0, 0, 0, w->width, w->height);
-    XFlush(w->display);
-#endif
+    SDL_RenderTexture(w->renderer, texture, NULL, NULL);
+    return true;
 }
+#else
+inline bool updateFramebuffer(const Window_t *w)
+{
+    if (!w->buffer_valid || !w->image) return false;
+
+    XPutImage(w->display, w->window, w->gc, w->image,
+              0, 0, 0, 0, w->bWidth, w->bHeight);
+    XFlush(w->display);
+    return true;
+}
+#endif
 
 inline double getFPS(const Window_t *w)
 {
-    return (w->deltat > 0.0) ? (1.0 / w->deltat) : 0.0;
+    if (w->deltat <= 0.0) return 0.0;
+    const double fps = 1.0 / w->deltat;
+    if (fps < 0.1) return 0.1;
+    if (fps > 10000.0) return 10000.0;
+    return fps;
+}
+
+inline double getDelta(const Window_t *w)
+{
+    return w->deltat;
 }
 
 inline void drawPixel(const Window_t *w, int x, int y, uint32_t color)
 {
-    if (x >= 0 && x < w->width && y >= 0 && y < w->height)
-        w->buffer[y * w->width + x] = color;
+    if (w->buffer_valid && x >= 0 && x < w->bWidth && y >= 0 && y < w->bHeight)
+        w->buffer[y * w->bWidth + x] = color;
+}
+
+inline void setVSync(Window_t *w, bool enable)
+{
+#ifdef SDL_IMPLEMENTATION
+    w->vsync = enable;
+    if (w->renderer) {
+        SDL_SetRenderVSync(w->renderer, enable ? 1 : 0);
+    }
+#else
+    (void)w; (void)enable;
+#endif
 }
 
 #endif // CORE_IMPLEMENTATION
 #endif // WRAPPER_CORE_H
 
 // ============================================================================
-// keys.h - Keyboard and Mouse Input (X11 or SDL3 backend)
+// Keyboard and Mouse Input (X11 or SDL3 backend)
 // ============================================================================
 #ifndef WRAPPER_KEYS_H
 #define WRAPPER_KEYS_H
-
-#include <stdbool.h>
-
-#ifdef SDL_IMPLEMENTATION
-    #include <SDL3/SDL.h>
-#else
-    #include <X11/Xlib.h>
-    #include <X11/keysym.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -421,7 +475,6 @@ typedef enum {
     MOUSE_COUNT
 } MouseButton;
 
-// Input state structure - must be initialized and passed to all functions
 typedef struct InputState {
     bool key_curr[KEY_COUNT];
     bool key_prev[KEY_COUNT];
@@ -439,119 +492,38 @@ typedef struct InputState {
     int center_x, center_y;
 } Input;
 
-// Initialize input state to zero
-/*  -> Example:
- *  Input input;
- *  inputInit(&input);
- */
+// Initialize input state - call once at startup
 void inputInit(Input *input);
 
-// Poll events and update input state, returns true if window should close
-/*  -> Example:
- *  #ifdef SDL_IMPLEMENTATION
- *  if (pollEvents(NULL, &input)) break;
- *  #else
- *  if (pollEvents(win.display, &input)) break;
- *  #endif
- */
+// Poll events and update input state - call once per frame BEFORE processing input
+// Returns true if window should close
+// NOTE: This automatically calls updateInput() at the end, so you don't need to call it manually
 #ifdef SDL_IMPLEMENTATION
-bool pollEvents(void *display, Input *input);
+bool pollEvents(void *display, Input *input, Window_t *win);
 #else
-bool pollEvents(Display *display, Input *input);
+bool pollEvents(Display *display, Input *input, Window_t *win);
 #endif
 
-// Copy current frame state to previous (call once per frame after processing)
-/*  -> Example:
- *  while(1) {
- *      ...
- *      updateInput(&input);
- *  }
- */
+// Copy current to previous - ONLY call manually if not using pollEvents
 void updateInput(Input *input);
 
-// Check if key is currently held down
-/*  -> Example:
- *  if (isKeyDown(&input, KEY_W)) // Move forward
- */
 bool isKeyDown(const Input *input, Key key);
-
-// Check if key was just pressed this frame
-/*  -> Example:
- *  if (isKeyPressed(&input, KEY_SPACE)) // Jump
- */
 bool isKeyPressed(const Input *input, Key key);
-
-// Check if key was just released this frame
-/*  -> Example:
- *  if (isKeyReleased(&input, KEY_E)) // Use item
- */
 bool isKeyReleased(const Input *input, Key key);
-
-// Check if mouse button is currently held down
-/*  -> Example:
- *  if (isMouseDown(&input, MOUSE_LEFT)) // Shoot
- */
 bool isMouseDown(const Input *input, MouseButton btn);
-
-// Check if mouse button was just pressed this frame
-/*  -> Example:
- *  if (isMousePressed(&input, MOUSE_LEFT)) // Fire once
- */
 bool isMousePressed(const Input *input, MouseButton btn);
-
-// Check if mouse button was just released this frame
-/*  -> Example:
- *  if (isMouseReleased(&input, MOUSE_LEFT)) // Release
- */
 bool isMouseReleased(const Input *input, MouseButton btn);
-
-// Get current mouse position in window coordinates
-/*  -> Example:
- *  int mx, my;
- *  getMousePosition(&input, &mx, &my);
- */
 void getMousePosition(const Input *input, int *x, int *y);
-
-// Get mouse delta since last frame (for FPS camera controls)
-/*  -> Example:
- *  int dx, dy;
- *  getMouseDelta(&input, &dx, &dy);
- */
 void getMouseDelta(const Input *input, int *dx, int *dy);
+bool isMouseGrabbed(const Input *input);
 
-// Grab mouse cursor (hides and locks to window center)
-/*  -> Example:
- *  #ifdef SDL_IMPLEMENTATION
- *  grabMouse(win.window, win.width, win.height, &input);
- *  #else
- *  grabMouse(win.display, win.window, win.width, win.height, &input);
- *  #endif
- */
 #ifdef SDL_IMPLEMENTATION
 void grabMouse(SDL_Window *window, int width, int height, Input *input);
-#else
-void grabMouse(Display *display, Window window, int width, int height, Input *input);
-#endif
-
-// Release grabbed mouse cursor
-/*  -> Example:
- *  #ifdef SDL_IMPLEMENTATION
- *  releaseMouse(win.window, &input);
- *  #else
- *  releaseMouse(win.display, win.window, &input);
- *  #endif
- */
-#ifdef SDL_IMPLEMENTATION
 void releaseMouse(SDL_Window *window, Input *input);
 #else
+void grabMouse(Display *display, Window window, int width, int height, Input *input);
 void releaseMouse(Display *display, Window window, Input *input);
 #endif
-
-// Check if mouse is currently grabbed
-/*  -> Example:
- *  if (isMouseGrabbed(&input)) { ... }
- */
-bool isMouseGrabbed(const Input *input);
 
 #ifdef __cplusplus
 }
@@ -593,13 +565,25 @@ inline void inputInit(Input *input)
 
 #ifdef SDL_IMPLEMENTATION
 
-inline bool pollEvents(void *display, Input *input)
+inline bool pollEvents(void *display, Input *input, Window_t *win)
 {
     (void)display;
     bool shouldClose = false;
 
     input->mouse_dx = 0;
     input->mouse_dy = 0;
+
+    // Handle window resize
+    if (win) {
+        int nw, nh;
+        SDL_GetWindowSize(win->window, &nw, &nh);
+        if (nw != win->width || nh != win->height) {
+            win->width = nw;
+            win->height = nh;
+            // Note: bWidth/bHeight should be updated in main.cpp based on RENDER_SCALE
+            win->resized = true;
+        }
+    }
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -715,18 +699,33 @@ inline bool pollEvents(void *display, Input *input)
         }
     }
 
+    updateInput(input);
     return shouldClose;
 }
 
 #else // X11 backend
 
-inline bool pollEvents(Display *display, Input *input)
+inline bool pollEvents(Display *display, Input *input, Window_t *win)
 {
     const Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
     bool shouldClose = false;
 
     input->mouse_dx = 0;
     input->mouse_dy = 0;
+
+    // Handle window resize
+    if (win) {
+        XEvent ev;
+        while (XCheckTypedWindowEvent(display, win->window, ConfigureNotify, &ev)) {
+            if (ev.xconfigure.width != win->width || ev.xconfigure.height != win->height) {
+                win->width = ev.xconfigure.width;
+                win->height = ev.xconfigure.height;
+                // Note: bWidth/bHeight should be updated in main.cpp based on RENDER_SCALE
+                win->resized = true;
+            }
+        }
+        XFlush(display);
+    }
 
     while (XPending(display) > 0)
     {
@@ -855,6 +854,7 @@ inline bool pollEvents(Display *display, Input *input)
         input->last_y = input->center_y;
     }
 
+    updateInput(input);
     return shouldClose;
 }
 
