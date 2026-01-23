@@ -1767,6 +1767,7 @@ inline void renderInit(Renderer* r, Window_t* win, Camera* cam)
     r->wireframe = false;
     r->backface_culling = true;
     r->light_dir = norm(vec3(0.3f, -1.0f, 0.5f));
+    r->light = true;
 
     r->depth.width = win->bWidth;
     r->depth.height = win->bHeight;
